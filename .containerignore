@@ -10,5 +10,6 @@ npm-debug.log*
 .env
 .env.*
 README.md
+GUIDE.md
 Containerfile
 .containerignore

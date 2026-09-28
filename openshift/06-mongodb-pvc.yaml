@@ -1,0 +1,16 @@
+# Phase 2 - "provision MongoDB/configuration"
+#
+# Persistent storage for Mongo's /data/db. This is what makes match
+# results survive pod restarts and the V1 -> V2 rollout itself.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-data
+  labels:
+    app: mongodb
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

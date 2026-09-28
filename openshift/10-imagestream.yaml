@@ -1,0 +1,16 @@
+# Phase 3 - "run the pipeline -> build V2 -> rollout V2"
+#
+# Where the Pipeline's build task publishes the image it builds.
+# `lookupPolicy.local: true` lets other objects in this namespace
+# reference it by short name/tag if you ever want to (not required by
+# the Deployment as written, which uses the full internal-registry pull
+# spec directly).
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: tower-defense
+  labels:
+    app: tower-defense
+spec:
+  lookupPolicy:
+    local: true

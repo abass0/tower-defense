@@ -1,0 +1,22 @@
+# Phase 3 - "run the pipeline -> build V2 -> rollout V2"
+#
+# Grants the `edit` role, scoped to this namespace, to the `pipeline`
+# ServiceAccount. Assumes the OpenShift Pipelines operator is already
+# installed and has auto-created that ServiceAccount in this namespace -
+# this file does not create it. `edit` is what lets the Pipeline's final
+# task run `oc set image` / `oc rollout status` against the Tower Defense
+# Deployment; pushing the built image to the internal registry is
+# already covered by the `pipeline` SA's default permissions.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pipeline-edit-tower-defense
+  labels:
+    app: tower-defense
+subjects:
+  - kind: ServiceAccount
+    name: pipeline
+roleRef:
+  kind: ClusterRole
+  name: edit
+  apiGroup: rbac.authorization.k8s.io

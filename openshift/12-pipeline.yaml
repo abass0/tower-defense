@@ -1,0 +1,88 @@
+# Phase 3 - "run the pipeline -> build V2 -> rollout V2"
+#
+# The reusable Pipeline definition - applied once, then triggered
+# on-demand via 13-pipelinerun.yaml. Three tasks, all using ClusterTasks
+# that ship with the OpenShift Pipelines operator by default, so no
+# custom Task YAML is needed:
+#
+#   fetch-source -> build-image -> deploy
+#
+# "deploy" is the literal V1 -> V2 rollout: it patches the SAME
+# Deployment created in 01-towerdefense-deployment.yaml, then waits for
+# the rollout to finish - no other YAML changes, no new Deployment
+# object.
+#
+# NOTE: `git-clone`, `buildah`, and `openshift-client` ClusterTask
+# parameter names below match their commonly-installed versions, but
+# ClusterTask interfaces do occasionally change between operator
+# versions. Before the live demo, verify with:
+#   tkn clustertask describe git-clone
+#   tkn clustertask describe buildah
+#   tkn clustertask describe openshift-client
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: tower-defense-build-deploy
+  labels:
+    app: tower-defense
+spec:
+  params:
+    - name: git-url
+      type: string
+      description: Git repository to build from.
+    - name: git-revision
+      type: string
+      description: Branch/tag/commit to build. The V2 application code lives on the `database` branch.
+      default: database
+    - name: image
+      type: string
+      description: Full pull spec for the image this pipeline builds and deploys.
+      default: image-registry.openshift-image-registry.svc:5000/$(context.pipelineRun.namespace)/tower-defense:v2
+    - name: deployment-name
+      type: string
+      default: tower-defense
+
+  workspaces:
+    - name: shared-workspace
+      description: Shared between fetch-source and build-image (cloned source -> build context).
+
+  tasks:
+    - name: fetch-source
+      taskRef:
+        name: git-clone
+        kind: ClusterTask
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+      params:
+        - name: url
+          value: $(params.git-url)
+        - name: revision
+          value: $(params.git-revision)
+
+    - name: build-image
+      taskRef:
+        name: buildah
+        kind: ClusterTask
+      runAfter:
+        - fetch-source
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      params:
+        - name: IMAGE
+          value: $(params.image)
+        - name: DOCKERFILE
+          value: ./Containerfile
+
+    - name: deploy
+      taskRef:
+        name: openshift-client
+        kind: ClusterTask
+      runAfter:
+        - build-image
+      params:
+        - name: SCRIPT
+          value: |
+            oc set image "deployment/$(params.deployment-name)" "tower-defense=$(params.image)"
+            oc rollout status "deployment/$(params.deployment-name)" --timeout=180s

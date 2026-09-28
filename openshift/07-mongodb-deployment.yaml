@@ -1,0 +1,73 @@
+# Phase 2 - "provision MongoDB/configuration"
+#
+# MongoDB Community Server as a plain Deployment - not the MongoDB
+# Community Operator. The Operator is the production-correct way to run
+# Mongo on OpenShift, but brings its own CRDs/RBAC/reconciler, which is
+# more than a "clean, minimal, easy to explain" demo needs. This is the
+# one artifact swap you'd make if this ever needs to become a production
+# reference instead of a demo.
+#
+# `strategy: Recreate` matters here: with a single ReadWriteOnce PVC, a
+# rolling update would try to start a second pod before the first one
+# releases the volume and get stuck Pending.
+#
+# No `securityContext.fsGroup` is hardcoded on purpose - OpenShift's
+# default restricted-v2 SCC auto-assigns an fsGroup (and the matching
+# volume permissions) from the namespace's allocated range when the pod
+# doesn't specify one, and that range differs per namespace/cluster. If
+# you ever see permission-denied errors writing to /data/db on a cluster
+# where that isn't true, set `spec.template.spec.securityContext.fsGroup`
+# explicitly to a value from:
+#   oc get namespace <ns> -o jsonpath='{.metadata.annotations.openshift\.io/sa\.scc\.supplemental-groups}'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  labels:
+    app: mongodb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: docker.io/library/mongo:7
+          ports:
+            - containerPort: 27017
+          envFrom:
+            - secretRef:
+                name: mongodb-credentials
+            - configMapRef:
+                name: mongodb-config
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            tcpSocket:
+              port: 27017
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 27017
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mongodb-data

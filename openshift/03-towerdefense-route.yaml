@@ -1,0 +1,17 @@
+# Phase 1 - "V1 running"
+#
+# The externally-reachable URL. This is what you actually play the game
+# through for the entire demo, start to finish - it never changes,
+# including across the V1 -> V2 rollout.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: tower-defense
+  labels:
+    app: tower-defense
+spec:
+  to:
+    kind: Service
+    name: tower-defense
+  port:
+    targetPort: 8080

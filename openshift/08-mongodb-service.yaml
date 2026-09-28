@@ -1,0 +1,19 @@
+# Phase 2 - "provision MongoDB/configuration"
+#
+# Internal-only Service exposing Mongo at a stable DNS name: `mongodb`.
+# This is exactly what MONGODB_HOST in 09-towerdefense-configmap.yaml
+# points to. No Route - Mongo is never reachable from outside the
+# cluster, only from the app pod.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  labels:
+    app: mongodb
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017

@@ -1,0 +1,17 @@
+# Phase 1 - "V1 running"
+#
+# ClusterIP Service in front of the app pod(s). The Route (next file)
+# targets this Service, not the Deployment directly.
+apiVersion: v1
+kind: Service
+metadata:
+  name: tower-defense
+  labels:
+    app: tower-defense
+spec:
+  selector:
+    app: tower-defense
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

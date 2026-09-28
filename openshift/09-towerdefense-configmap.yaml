@@ -1,0 +1,20 @@
+# Phase 2 - "provision MongoDB/configuration"
+#
+# The APP's own Mongo-connection config - how the Tower Defense server
+# finds the Mongo instance provisioned above. Read by server/config.js
+# (see the `database` branch) purely via process.env; nothing here is
+# Mongo-specific configuration, it's app configuration that happens to
+# describe how to reach Mongo. This is what the V2 code actually uses;
+# the currently-running V1 image ignores it entirely.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: towerdefense-config
+  labels:
+    app: tower-defense
+data:
+  MONGODB_HOST: mongodb
+  MONGODB_PORT: "27017"
+  MONGODB_DATABASE: towerdefense
+  MONGODB_ENABLED: "true"
+  LEADERBOARD_LIMIT: "10"

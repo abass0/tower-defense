@@ -1,0 +1,38 @@
+# Phase 3 - "run the pipeline -> build V2 -> rollout V2"
+#
+# The live trigger. Applying/creating this is "run the pipeline" during
+# the demo.
+#
+# Uses `generateName` (not a fixed `name`) so this file can be reused for
+# repeated rehearsals - a PipelineRun is a one-shot resource, so re-using
+# the exact same name would fail on a second attempt. Because of
+# `generateName`, apply this with `oc create -f`, not `oc apply -f`.
+#
+# The shared workspace uses an inline `volumeClaimTemplate` rather than a
+# separate, pre-created PVC file, to keep the file count down - Tekton
+# provisions and tears down this PVC automatically per run.
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: tower-defense-build-deploy-run-
+  labels:
+    app: tower-defense
+spec:
+  pipelineRef:
+    name: tower-defense-build-deploy
+  params:
+    - name: git-url
+      value: https://github.com/abass0/tower-defense.git
+    - name: git-revision
+      value: database
+    - name: deployment-name
+      value: tower-defense
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi

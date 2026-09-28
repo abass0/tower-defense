@@ -1,0 +1,65 @@
+# Phase 1 - "V1 running"
+#
+# The Tower Defense app Deployment. This is the ONE Deployment object
+# used for both V1 and V2 - the Pipeline (see 12-pipeline.yaml) rolls out
+# V2 later by patching `spec.template.spec.containers[0].image`, not by
+# replacing this file. Nothing here needs to change between versions.
+#
+# envFrom references the Mongo Secret/ConfigMap created in Phase 2, but
+# both are marked `optional: true` - this Deployment runs fine before
+# either exists, because the V1 image contains no Mongo-related code at
+# all. Provisioning that config ahead of time is intentionally harmless.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tower-defense
+  labels:
+    app: tower-defense
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tower-defense
+  template:
+    metadata:
+      labels:
+        app: tower-defense
+    spec:
+      containers:
+        - name: tower-defense
+          # Replace <NAMESPACE> with the actual project name (`oc project -q`).
+          # Starts pointed at the v1 tag; the Pipeline's "deploy" task
+          # later updates this to :v2.
+          image: image-registry.openshift-image-registry.svc:5000/<NAMESPACE>/tower-defense:v1
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: towerdefense-config
+                optional: true
+            - secretRef:
+                name: mongodb-credentials
+                optional: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          # Deliberately NOT dependent on Mongo's availability - /api/health
+          # always returns 200 as long as Express itself is serving, and
+          # reports Mongo's status only as informational data in the body.
+          # A database blip must never look like an unhealthy app pod.
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10

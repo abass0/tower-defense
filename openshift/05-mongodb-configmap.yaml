@@ -1,0 +1,14 @@
+# Phase 2 - "provision MongoDB/configuration"
+#
+# MongoDB's OWN non-secret configuration (what database to initialize).
+# Deliberately separate from 09-towerdefense-configmap.yaml: this one
+# configures Mongo itself, that one configures how the app finds Mongo -
+# different consumers, different lifecycle.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-config
+  labels:
+    app: mongodb
+data:
+  MONGO_INITDB_DATABASE: towerdefense
